@@ -15,7 +15,7 @@ import scala.collection.mutable.HashMap
 import java.io.File
 
 import Constants._
-
+import argo.Argo
 import util._
 import io._
 import datacache._
@@ -226,6 +226,19 @@ class Patmos(configFile: String, binFile: String, datFile: String) extends Modul
     val tdmArbiter = Module(new cmp.TdmArbiter(nrCores))
     for (i <- (0 until nrCores)) {
       tdmArbiter.io.slave(i) <> cores(i).io.comSpm
+    }
+  } else if (cmpDevice == 4) {
+    if (nrCores > 1) {
+      val argo = Module(new Argo())
+      argo.io.superMode := 0.U
+      for(i <- cores.indices){
+        println("Connecting core #" + i + " <=> Argo")
+        // SPM
+        argo.io.comSpm(i) <> cores(i).io.comSpm
+        // NI
+        argo.io.comConf(i) <> cores(i).io.comConf
+        argo.io.superMode(i) := cores(i).io.superMode
+      }
     }
   } else if (cmpDevice == 5) {
     val ownspm = Module(new cmp.OwnSPM(nrCores, nrCores, 1024))
