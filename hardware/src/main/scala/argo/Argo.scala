@@ -59,7 +59,7 @@ class Argo extends Module {
 	val argoNoc = Module(new ArgoNoC(ArgoConfig.getConfig))
 	val comSPMWrapper = Vec.fill(ArgoConfig.getSize){Module(new ComSpmWrapper(ArgoConfig.getConfig)).io}
 
-
+	argoNoc.io.supervisor := io.superMode
 	// Wire up
 	for(i <- 0 until ArgoConfig.getSize){
     // NoC - Patmos

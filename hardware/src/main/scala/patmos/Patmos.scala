@@ -239,6 +239,7 @@ class Patmos(configFile: String, binFile: String, datFile: String) extends Modul
         argo.io.comConf(i) <> cores(i).io.comConf
         argo.io.superMode(i) := cores(i).io.superMode
       }
+      io
     }
   } else if (cmpDevice == 5) {
     val ownspm = Module(new cmp.OwnSPM(nrCores, nrCores, 1024))
