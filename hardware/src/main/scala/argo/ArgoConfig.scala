@@ -22,6 +22,7 @@ abstract class ArgoConfig{
   var HEADER_CTRL_WIDTH : Int
   var ACTIVE_BIT : Int
   // SPM
+	var SPM_ADDR_WIDTH : Int
   var SPM_IDX_SIZE: Int
   // Link constants
   var LINK_DATA_WIDTH : Int = DATA_WIDTH
@@ -39,6 +40,7 @@ object ArgoConfig {
   	var HEADER_FIELD_WIDTH = 16
   	var HEADER_CTRL_WIDTH  = 2
   	var ACTIVE_BIT = 1
+		var SPM_ADDR_WIDTH = 16
   	var SPM_IDX_SIZE = 12
 	}
 	// Variables
