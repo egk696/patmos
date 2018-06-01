@@ -38,8 +38,6 @@
 
 #include "ptp1588.h"
 
-#define USE_HW_TIMESTAMP
-
 void ptpv2_intr_tx_handler(void) {
 	exc_prologue();
 	unsigned char msgType = (unsigned char) (PTP_TXCHAN_STATUS & PTP_CHAN_MSG_TYPE_MASK);
@@ -153,8 +151,8 @@ int ptpv2_issue_msg(unsigned tx_addr, unsigned rx_addr, unsigned char destinatio
 	}	
 	msg.body.nanoseconds = timestampNanoseconds;
 	msg.body.seconds = timestampSeconds;
-	ptpv2_serialize(msg, udp_data);	
-	printf("Issued MSG=%02X to %u:%u:%u:%u\n", msg.head.transportSpec_msgType, destination_ip[0], destination_ip[1], destination_ip[2], destination_ip[3]);
+	ptpv2_serialize(msg, udp_data);			
+	// printf("i_MSG=%02X to %u:%u:%u:%u\n", msg.head.transportSpec_msgType, destination_ip[0], destination_ip[1], destination_ip[2], destination_ip[3]);
 	udp_send_mac(tx_addr, rx_addr, destination_mac, destination_ip, eventPort, eventPort, udp_data, msgLen, 2000000);
 	if(msgType==PTP_SYNC_MSGTYPE){
 		//Master
@@ -176,13 +174,13 @@ int ptpv2_issue_msg(unsigned tx_addr, unsigned rx_addr, unsigned char destinatio
 		ptpTimeRecord.t3Nanoseconds = (unsigned) RTC_TIME_NS;
 		ptpTimeRecord.t3Seconds = (unsigned) RTC_TIME_SEC;
 		#endif
-	}	
+	}
 	return 1;
 }
 
 int ptpv2_handle_msg(unsigned tx_addr, unsigned rx_addr, unsigned char source_mac[6], unsigned char source_ip[4]){
-	unsigned char ans = 0;
 	unsigned char udp_data[54] = {0};
+	signed char ans = 0;
 	#ifdef USE_HW_TIMESTAMP
 	while((PTP_RXCHAN_STATUS & PTP_CHAN_VALID_TS_MASK) != PTP_CHAN_VALID_TS_MASK){continue;}
 	unsigned int timestampNanoseconds = (unsigned) PTP_RXCHAN_TIMESTAMP_NS;
@@ -193,35 +191,59 @@ int ptpv2_handle_msg(unsigned tx_addr, unsigned rx_addr, unsigned char source_ma
 	#endif
 	udp_get_data(rx_addr, udp_data, udp_get_data_length(rx_addr));
 	ptpMsg = ptpv2_deserialize(udp_data);
-	printf("Handling MSG=%02X\n", ptpMsg.head.transportSpec_msgType);
 	switch(ptpMsg.head.transportSpec_msgType){
 	case PTP_SYNC_MSGTYPE:
 		//Exec by slave port
 		ptpTimeRecord.t2Nanoseconds = timestampNanoseconds;
 		ptpTimeRecord.t2Seconds = timestampSeconds;
-		if((ptpMsg.head.flagField & FLAG_PTP_TWO_STEP_MASK) == FLAG_PTP_TWO_STEP_MASK){
-			ans = 1;
-		} else {
+		if((ptpMsg.head.flagField & FLAG_PTP_TWO_STEP_MASK) != FLAG_PTP_TWO_STEP_MASK){
 			// If single-step then store values as precise timestamp and issue DLYREQ
+			lastMasterInfo.ip[0] = source_ip[0];
+			lastMasterInfo.ip[1] = source_ip[1];
+			lastMasterInfo.ip[2] = source_ip[2];
+			lastMasterInfo.ip[3] = source_ip[3];
+			lastMasterInfo.mac[0] = source_mac[0];
+			lastMasterInfo.mac[1] = source_mac[1];
+			lastMasterInfo.mac[2] = source_mac[2];
+			lastMasterInfo.mac[3] = source_mac[3];
+			lastMasterInfo.mac[4] = source_mac[4];
+			lastMasterInfo.mac[5] = source_mac[5];
 			ptpTimeRecord.t1Nanoseconds = ptpMsg.body.nanoseconds;
 			ptpTimeRecord.t1Seconds = ptpMsg.body.seconds;
-			ans = ptpv2_issue_msg(tx_addr, rx_addr, source_mac, source_ip, ptpMsg.head.sequenceId, PTP_DLYREQ_MSGTYPE, PTP_DLYREQ_CTRL, PTP_EVENT_PORT);
 		}
+		ans = PTP_SYNC_MSGTYPE;
 		break;
-	case PTP_FOLLOW_MSGTYPE:		
+	case PTP_FOLLOW_MSGTYPE:
 		//Exec by slave port
 		ptpTimeRecord.t1Nanoseconds = ptpMsg.body.nanoseconds;
 		ptpTimeRecord.t1Seconds = ptpMsg.body.seconds;
-		ans = ptpv2_issue_msg(tx_addr, rx_addr, source_mac, source_ip, ptpMsg.head.sequenceId, PTP_DLYREQ_MSGTYPE, PTP_DLYREQ_CTRL, PTP_EVENT_PORT);
-		//TODO: Implement smarter time correction with rate configuration, not only abrupt register update
+		lastMasterInfo.ip[0] = source_ip[0];
+		lastMasterInfo.ip[1] = source_ip[1];
+		lastMasterInfo.ip[2] = source_ip[2];
+		lastMasterInfo.ip[3] = source_ip[3];
+		lastMasterInfo.mac[0] = source_mac[0];
+		lastMasterInfo.mac[1] = source_mac[1];
+		lastMasterInfo.mac[2] = source_mac[2];
+		lastMasterInfo.mac[3] = source_mac[3];
+		lastMasterInfo.mac[4] = source_mac[4];
+		lastMasterInfo.mac[5] = source_mac[5];
+		ans = PTP_FOLLOW_MSGTYPE;
 		break;
 	case PTP_DLYREQ_MSGTYPE:
 		//Exec by master port
 		ptpTimeRecord.t4Nanoseconds = timestampNanoseconds;
 		ptpTimeRecord.t4Seconds = timestampSeconds;
-		ipv4_get_source_ip(rx_addr, lastSlaveInfo.ip);
-		mac_addr_sender(rx_addr, lastSlaveInfo.mac);
-		ans = ptpv2_issue_msg(tx_addr, rx_addr, source_mac, source_ip, ptpMsg.head.sequenceId, PTP_DLYRPLY_MSGTYPE, PTP_DLYRPLY_CTRL, PTP_GENERAL_PORT);
+		lastSlaveInfo.ip[0] = source_ip[0];
+		lastSlaveInfo.ip[1] = source_ip[1];
+		lastSlaveInfo.ip[2] = source_ip[2];
+		lastSlaveInfo.ip[3] = source_ip[3];
+		lastSlaveInfo.mac[0] = source_mac[0];
+		lastSlaveInfo.mac[1] = source_mac[1];
+		lastSlaveInfo.mac[2] = source_mac[2];
+		lastSlaveInfo.mac[3] = source_mac[3];
+		lastSlaveInfo.mac[4] = source_mac[4];
+		lastSlaveInfo.mac[5] = source_mac[5];
+		ans = PTP_DLYREQ_MSGTYPE;
 		break;
 	case PTP_DLYRPLY_MSGTYPE:
 		//Exec by slave port
@@ -232,25 +254,23 @@ int ptpv2_handle_msg(unsigned tx_addr, unsigned rx_addr, unsigned char source_ma
 		ptpTimeRecord.delaySeconds = ptp_calc_one_way_delay(ptpTimeRecord.t1Seconds, ptpTimeRecord.t2Seconds, ptpTimeRecord.t3Seconds, ptpTimeRecord.t4Seconds);
 		ptpTimeRecord.offsetNanoseconds = ptp_calc_offset(ptpTimeRecord.t1Nanoseconds, ptpTimeRecord.t2Nanoseconds, ptpTimeRecord.delayNanoseconds);
 		ptpTimeRecord.offsetSeconds = ptp_calc_offset(ptpTimeRecord.t1Seconds, ptpTimeRecord.t2Seconds, ptpTimeRecord.delaySeconds);
-		unsigned int correctNs = (unsigned) ((int)RTC_TIME_NS - ptpTimeRecord.offsetNanoseconds);
-		unsigned int correctSec = (unsigned) ((int)RTC_TIME_SEC - ptpTimeRecord.offsetSeconds);
 		//Apply correction
-		if(RTC_CORRECTION_OFFSET == 0){
-			if(abs(ptpTimeRecord.offsetNanoseconds) > PTP_NS_OFFSET_THRESHOLD){
-				RTC_TIME_NS = correctNs;
+		if(PTP_CORRECTION_EN==1 || ptpMsg.head.sequenceId==1){
+			if(abs(ptpTimeRecord.offsetNanoseconds) > PTP_NS_OFFSET_THRESHOLD || PTP_RATE_CONTROL==0){
+				RTC_TIME_NS = (unsigned) ((int)RTC_TIME_NS - ptpTimeRecord.offsetNanoseconds);
 			} else {
-				RTC_CORRECTION_OFFSET = ptpTimeRecord.offsetNanoseconds;
+				if(RTC_CORRECTION_OFFSET == 0){
+					RTC_CORRECTION_OFFSET = ptpTimeRecord.offsetNanoseconds;
+				}
+			}
+			if(abs(ptpTimeRecord.offsetSeconds) > PTP_SEC_OFFSET_THRESHOLD){
+				RTC_TIME_SEC = (unsigned) ((int)RTC_TIME_SEC - ptpTimeRecord.offsetSeconds);
 			}
 		}
-		if(abs(ptpTimeRecord.offsetSeconds) > PTP_SEC_OFFSET_THRESHOLD){
-			RTC_TIME_SEC = correctSec;
-		}	
-		printf("#%u\t%d\t%d\n", ptpMsg.head.sequenceId, ptpTimeRecord.offsetSeconds, ptpTimeRecord.offsetNanoseconds);
-		ans = 1;
+		ans = PTP_DLYRPLY_MSGTYPE;
 		break;
 	default:
-		printf("FAIL: Unexpected PTP Type (%d)\n", (ptpMsg.head.transportSpec_msgType));
-		ans = 0;
+		return -2;
 		break;
 	}
 	return ans;
@@ -258,12 +278,12 @@ int ptpv2_handle_msg(unsigned tx_addr, unsigned rx_addr, unsigned char source_ma
 
 //Calculates the offset from the master clock based on timestamps T1, T2
 int ptp_calc_offset(int t1, int t2, int delay){
-	return (int) (t2-t1-delay);
+	return t2-t1-delay;
 }
 
 //Calculates the delay from the master clock based on timestamps T1, T2, T3, T4
 int ptp_calc_one_way_delay(int t1, int t2, int t3, int t4){
-	return (int) floorf((t2-t1+t4-t3)/2.0f);
+	return (int) (t2-t1+t4-t3)/2;
 }
 
 ///////////////////////////////////////////////////////////////

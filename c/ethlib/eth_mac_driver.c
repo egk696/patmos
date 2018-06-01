@@ -47,10 +47,19 @@
 
 //This function sends an ethernet frame located at tx_addr and of length frame_length.
 void eth_mac_send(unsigned int tx_addr, unsigned int frame_length){
+    unsigned char done = 0;
+    unsigned char free = 0; 
+    //Wait until buffer is free 
+ 	while (free==1){
+         free = (eth_iord(0x400) & 0x8000);
+    };
     eth_iowr(0x04, 0x00000001);
 	eth_iowr(0x404, tx_addr);
 	eth_iowr(0x400, ((frame_length<<16)|(0xF000)));
- 	while ((eth_iord(0x400) & 0x8000)==1){;}; //Wait until is is done
+    //Wait until is is done
+    while (done==0){
+        done = (eth_iord(0x04) & 0x1);
+    }; 
 return;
 }
 
