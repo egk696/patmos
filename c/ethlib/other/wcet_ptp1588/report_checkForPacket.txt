@@ -1,0 +1,15 @@
+---
+- analysis-entry: checkForPacket
+  source: platin
+  cycles: 4577
+  cache-max-cycles-instr: 1176
+  cache-min-hits-instr: 2
+  cache-max-misses-instr: 9
+  cache-max-cycles-stack: 0
+  cache-max-misses-stack: 0
+  cache-max-cycles-data: 2205
+  cache-min-hits-data: 0
+  cache-max-misses-data: 17
+  cache-max-stores-data: 88
+  cache-unknown-address-data: 105
+  cache-max-cycles: 3381

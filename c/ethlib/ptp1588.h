@@ -192,7 +192,7 @@ void ptpv2_intr_rx_handler(void) __attribute__((naked));
 void ptpv2_intr_tx_handler(void) __attribute__((naked));
 
 //Serializes a PTPv2 message structure into buffer byte array
-void ptpv2_serialize(PTPv2Msg msg, unsigned char buffer[]);
+int ptpv2_serialize(PTPv2Msg msg, unsigned char buffer[]);
 
 //Deserializes a buffer byte array to a PTPv2 message structure
 PTPv2Msg ptpv2_deserialize(unsigned char buffer[]);
@@ -202,6 +202,9 @@ int ptpv2_issue_msg(unsigned tx_addr, unsigned rx_addr, unsigned char destinatio
 
 //Handles a PTPv2 Message
 int ptpv2_handle_msg(unsigned tx_addr, unsigned rx_addr, unsigned char source_mac[6], unsigned char source_ip[4]);
+
+//Applies the correction mechanism based on the calculated offset and acceptable threshold value
+void ptp_correct_offset();
 
 //Calculates the offset from the master clock based on timestamps T1, T2
 int ptp_calc_offset(int t1, int t2, int delay);

@@ -83,8 +83,10 @@ unsigned short int udp_get_data_length(unsigned int pkt_addr){
 }
 
 //This function gets the data field of an UDP packet.
+__attribute__((noinline))
 unsigned char udp_get_data(unsigned int pkt_addr, unsigned char data[], unsigned int data_length){
-	if (data_length <= udp_get_data_length(pkt_addr)){	
+	if (data_length <= udp_get_data_length(pkt_addr)){
+		_Pragma("loopbound min 0 max 54")	
 		for (int i = 0; i<data_length; i++){
 			data[i] = mem_iord_byte(pkt_addr + 42 + i);
 		}
@@ -232,6 +234,7 @@ int udp_send(unsigned int tx_addr, unsigned int rx_addr, unsigned char destinati
 	return 1;
 }
 
+__attribute__((noinline))
 int udp_send_mac(unsigned int tx_addr, unsigned int rx_addr, unsigned char destination_mac[], unsigned char destination_ip[], unsigned short int source_port, unsigned short int destination_port, unsigned char data[], unsigned short int data_length, long long unsigned int timeout){
 	//Resolve the ip address
 	unsigned short int udp_length = data_length + 8;

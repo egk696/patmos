@@ -64,8 +64,8 @@ void ptpv2_intr_tx_handler(void) {
 	exc_epilogue();
 }
 
-
-void ptpv2_serialize(PTPv2Msg msg, unsigned char buffer[]){
+__attribute__((noinline))
+int ptpv2_serialize(PTPv2Msg msg, unsigned char buffer[]){
 	//Head
 	memcpy(buffer, &msg.head.transportSpec_msgType, 1*sizeof(char));
 	memcpy(buffer+1, &msg.head.reserved_versionPTP, 1*sizeof(char));
@@ -87,8 +87,10 @@ void ptpv2_serialize(PTPv2Msg msg, unsigned char buffer[]){
 	    memcpy(buffer+52, &msg.body.portId, 2*sizeof(char));
     }
 	// print_bytes(buffer, 54);
+	return 1;
 }
 
+__attribute__((noinline))
 PTPv2Msg ptpv2_deserialize(unsigned char buffer[]){
     PTPv2Msg msg;
     //Head
@@ -115,11 +117,12 @@ PTPv2Msg ptpv2_deserialize(unsigned char buffer[]){
     return msg;
 }
 
+__attribute__((noinline))
 int ptpv2_issue_msg(unsigned tx_addr, unsigned rx_addr, unsigned char destination_mac[6], unsigned char destination_ip[4], unsigned seqId, unsigned msgType, unsigned ctrlField, unsigned short eventPort) {
 	unsigned short msgLen = msgType==PTP_DLYRPLY_MSGTYPE ? 54 : 44;
-	unsigned char udp_data[54] = {0};
-	unsigned int timestampNanoseconds = (unsigned) 0;
-	unsigned int timestampSeconds =  (unsigned) 0;
+	unsigned char *udp_data = malloc(msgLen*sizeof(char));
+	unsigned int timestampNanoseconds = 0;
+	unsigned int timestampSeconds = 0;
 	PTPv2Msg msg;
 	msg.head.transportSpec_msgType = msgType;
 	msg.head.reserved_versionPTP = 0x02;
@@ -130,33 +133,33 @@ int ptpv2_issue_msg(unsigned tx_addr, unsigned rx_addr, unsigned char destinatio
 	switch(msgType){
 		case PTP_SYNC_MSGTYPE:
 			//Master
-			timestampNanoseconds = (unsigned)RTC_TIME_NS;
-			timestampSeconds = (unsigned)RTC_TIME_SEC;
+			msg.body.nanoseconds = (unsigned)RTC_TIME_NS;
+			msg.body.seconds = (unsigned)RTC_TIME_SEC;
 			break;
 		case PTP_FOLLOW_MSGTYPE:
 			//Master
-			timestampNanoseconds = ptpTimeRecord.t1Nanoseconds;
-			timestampSeconds = ptpTimeRecord.t1Seconds;
+			msg.body.nanoseconds = ptpTimeRecord.t1Nanoseconds;
+			msg.body.seconds = ptpTimeRecord.t1Seconds;
 			break;
 		case PTP_DLYREQ_MSGTYPE:
 			//Slave
-			timestampNanoseconds = (unsigned)RTC_TIME_NS;
-			timestampSeconds = (unsigned)RTC_TIME_SEC;
+			msg.body.nanoseconds = (unsigned)RTC_TIME_NS;
+			msg.body.seconds = (unsigned)RTC_TIME_SEC;
 			break;
 		case PTP_DLYRPLY_MSGTYPE:
 			//Master
-			timestampNanoseconds = ptpTimeRecord.t4Nanoseconds;
-			timestampSeconds = ptpTimeRecord.t4Seconds;
+			msg.body.nanoseconds = ptpTimeRecord.t4Nanoseconds;
+			msg.body.seconds = ptpTimeRecord.t4Seconds;
 			break; 
-	}	
-	msg.body.nanoseconds = timestampNanoseconds;
-	msg.body.seconds = timestampSeconds;
-	ptpv2_serialize(msg, udp_data);			
+	}
+	// ptpv2_serialize(msg, udp_data);
+	udp_data = (unsigned char*)&msg;
 	// printf("i_MSG=%02X to %u:%u:%u:%u\n", msg.head.transportSpec_msgType, destination_ip[0], destination_ip[1], destination_ip[2], destination_ip[3]);
 	udp_send_mac(tx_addr, rx_addr, destination_mac, destination_ip, eventPort, eventPort, udp_data, msgLen, 2000000);
 	if(msgType==PTP_SYNC_MSGTYPE){
 		//Master
 		#ifdef USE_HW_TIMESTAMP
+		_Pragma("loopbound min 0 max 1")	
 		while((PTP_TXCHAN_STATUS & PTP_CHAN_VALID_TS_MASK) != PTP_CHAN_VALID_TS_MASK){continue;}
 		ptpTimeRecord.t1Nanoseconds = (unsigned) PTP_TXCHAN_TIMESTAMP_NS;
 		ptpTimeRecord.t1Seconds = (unsigned) PTP_TXCHAN_TIMESTAMP_SEC;
@@ -167,6 +170,7 @@ int ptpv2_issue_msg(unsigned tx_addr, unsigned rx_addr, unsigned char destinatio
 	} else if(msgType==PTP_DLYREQ_MSGTYPE){
 		//Slave
 		#ifdef USE_HW_TIMESTAMP
+		_Pragma("loopbound min 0 max 1")	
 		while((PTP_TXCHAN_STATUS & PTP_CHAN_VALID_TS_MASK) != PTP_CHAN_VALID_TS_MASK){continue;}
 		ptpTimeRecord.t3Nanoseconds = (unsigned) PTP_TXCHAN_TIMESTAMP_NS;
 		ptpTimeRecord.t3Seconds = (unsigned) PTP_TXCHAN_TIMESTAMP_SEC;
@@ -178,10 +182,12 @@ int ptpv2_issue_msg(unsigned tx_addr, unsigned rx_addr, unsigned char destinatio
 	return 1;
 }
 
+__attribute__((noinline))
 int ptpv2_handle_msg(unsigned tx_addr, unsigned rx_addr, unsigned char source_mac[6], unsigned char source_ip[4]){
 	unsigned char udp_data[54] = {0};
 	signed char ans = 0;
 	#ifdef USE_HW_TIMESTAMP
+	_Pragma("loopbound min 0 max 1")	
 	while((PTP_RXCHAN_STATUS & PTP_CHAN_VALID_TS_MASK) != PTP_CHAN_VALID_TS_MASK){continue;}
 	unsigned int timestampNanoseconds = (unsigned) PTP_RXCHAN_TIMESTAMP_NS;
 	unsigned int timestampSeconds =  (unsigned) PTP_RXCHAN_TIMESTAMP_SEC;
@@ -190,7 +196,7 @@ int ptpv2_handle_msg(unsigned tx_addr, unsigned rx_addr, unsigned char source_ma
 	unsigned int timestampSeconds =  (unsigned) RTC_TIME_SEC;
 	#endif
 	udp_get_data(rx_addr, udp_data, udp_get_data_length(rx_addr));
-	ptpMsg = ptpv2_deserialize(udp_data);
+	// memcpy(&ptpMsg, &udp_data, 54);
 	switch(ptpMsg.head.transportSpec_msgType){
 	case PTP_SYNC_MSGTYPE:
 		//Exec by slave port
@@ -246,27 +252,25 @@ int ptpv2_handle_msg(unsigned tx_addr, unsigned rx_addr, unsigned char source_ma
 		ans = PTP_DLYREQ_MSGTYPE;
 		break;
 	case PTP_DLYRPLY_MSGTYPE:
-		//Exec by slave port
+		// Exec by slave port
 		ptpTimeRecord.t4Nanoseconds = ptpMsg.body.nanoseconds;
 		ptpTimeRecord.t4Seconds = ptpMsg.body.seconds;
-		//Calculation
 		ptpTimeRecord.delayNanoseconds = ptp_calc_one_way_delay(ptpTimeRecord.t1Nanoseconds, ptpTimeRecord.t2Nanoseconds, ptpTimeRecord.t3Nanoseconds, ptpTimeRecord.t4Nanoseconds);
-		ptpTimeRecord.delaySeconds = ptp_calc_one_way_delay(ptpTimeRecord.t1Seconds, ptpTimeRecord.t2Seconds, ptpTimeRecord.t3Seconds, ptpTimeRecord.t4Seconds);
 		ptpTimeRecord.offsetNanoseconds = ptp_calc_offset(ptpTimeRecord.t1Nanoseconds, ptpTimeRecord.t2Nanoseconds, ptpTimeRecord.delayNanoseconds);
+		ptpTimeRecord.delaySeconds = ptp_calc_one_way_delay(ptpTimeRecord.t1Seconds, ptpTimeRecord.t2Seconds, ptpTimeRecord.t3Seconds, ptpTimeRecord.t4Seconds);
 		ptpTimeRecord.offsetSeconds = ptp_calc_offset(ptpTimeRecord.t1Seconds, ptpTimeRecord.t2Seconds, ptpTimeRecord.delaySeconds);
 		//Apply correction
-		if(PTP_CORRECTION_EN==1 || ptpMsg.head.sequenceId==1){
-			if(abs(ptpTimeRecord.offsetNanoseconds) > PTP_NS_OFFSET_THRESHOLD || PTP_RATE_CONTROL==0){
-				RTC_TIME_NS = (unsigned) ((int)RTC_TIME_NS - ptpTimeRecord.offsetNanoseconds);
-			} else {
-				if(RTC_CORRECTION_OFFSET == 0){
-					RTC_CORRECTION_OFFSET = ptpTimeRecord.offsetNanoseconds;
-				}
-			}
-			if(abs(ptpTimeRecord.offsetSeconds) > PTP_SEC_OFFSET_THRESHOLD){
-				RTC_TIME_SEC = (unsigned) ((int)RTC_TIME_SEC - ptpTimeRecord.offsetSeconds);
-			}
-		}
+		// if(PTP_CORRECTION_EN==1 || ptpMsg.head.sequenceId==1){
+		// 	if(abs(ptpTimeRecord.offsetNanoseconds) > PTP_NS_OFFSET_THRESHOLD || PTP_RATE_CONTROL==0){
+		// 		RTC_TIME_NS = (unsigned) ((int)RTC_TIME_NS - ptpTimeRecord.offsetNanoseconds);
+		// 	} else {
+		// 			RTC_CORRECTION_OFFSET = ptpTimeRecord.offsetNanoseconds;
+		// 	}
+		// 	if(ptpTimeRecord.offsetSeconds != 0){
+		// 		RTC_TIME_SEC = (unsigned) ((int)RTC_TIME_SEC - ptpTimeRecord.offsetSeconds);
+		// 	}
+		// }
+		ptp_correct_offset();
 		ans = PTP_DLYRPLY_MSGTYPE;
 		break;
 	default:
@@ -276,12 +280,28 @@ int ptpv2_handle_msg(unsigned tx_addr, unsigned rx_addr, unsigned char source_ma
 	return ans;
 }
 
+//Applies the correction mechanism based on the calculated offset and acceptable threshold value
+__attribute__((noinline))
+void ptp_correct_offset(){
+	//Calculation
+	if(PTP_RATE_CONTROL==0){
+		RTC_TIME_NS = (unsigned) ((int)RTC_TIME_NS - ptpTimeRecord.offsetNanoseconds);
+	} else {
+		RTC_CORRECTION_OFFSET = ptpTimeRecord.offsetNanoseconds;
+	}
+	if(ptpTimeRecord.offsetSeconds != 0){
+		RTC_TIME_SEC = (unsigned) ((int)RTC_TIME_SEC - ptpTimeRecord.offsetSeconds);
+	}
+}
+
 //Calculates the offset from the master clock based on timestamps T1, T2
+__attribute__((noinline))
 int ptp_calc_offset(int t1, int t2, int delay){
 	return t2-t1-delay;
 }
 
 //Calculates the delay from the master clock based on timestamps T1, T2, T3, T4
+__attribute__((noinline))
 int ptp_calc_one_way_delay(int t1, int t2, int t3, int t4){
 	return (int) (t2-t1+t4-t3)/2;
 }

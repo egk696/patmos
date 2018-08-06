@@ -1,0 +1,13 @@
+---
+- analysis-entry: ptp_calc_one_way_delay
+  source: platin
+  cycles: 7
+  cache-max-cycles-instr: 0
+  cache-min-hits-instr: 0
+  cache-max-misses-instr: 0
+  cache-max-cycles-stack: 0
+  cache-max-misses-stack: 0
+  cache-max-cycles-data: 0
+  cache-min-hits-data: 0
+  cache-max-misses-data: 0
+  cache-max-cycles: 0

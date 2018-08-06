@@ -1,0 +1,15 @@
+---
+- analysis-entry: ptpv2_handle_msg
+  source: platin
+  cycles: 3893
+  cache-max-cycles-instr: 777
+  cache-min-hits-instr: 1
+  cache-max-misses-instr: 5
+  cache-max-cycles-stack: 0
+  cache-max-misses-stack: 0
+  cache-max-cycles-data: 2037
+  cache-min-hits-data: 0
+  cache-max-misses-data: 15
+  cache-max-stores-data: 82
+  cache-unknown-address-data: 97
+  cache-max-cycles: 2814

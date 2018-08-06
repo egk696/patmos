@@ -44,7 +44,7 @@ def update():
     line = raw.readline()
     if(line.startswith("#")):
         try:
-            seq,sec,nano = line.split("\t")
+            seq,nano = line.split("\t")
             y = int(nano)
             data.append(max(min(y, thres), -thres))
             xdata = np.array(data, dtype='int32')

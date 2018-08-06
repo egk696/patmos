@@ -1,0 +1,15 @@
+---
+- analysis-entry: ptpv2_deserialize
+  source: platin
+  cycles: 2149
+  cache-max-cycles-instr: 336
+  cache-min-hits-instr: 0
+  cache-max-misses-instr: 2
+  cache-max-cycles-stack: 0
+  cache-max-misses-stack: 0
+  cache-max-cycles-data: 1638
+  cache-min-hits-data: 0
+  cache-max-misses-data: 55
+  cache-max-stores-data: 23
+  cache-unknown-address-data: 78
+  cache-max-cycles: 1974

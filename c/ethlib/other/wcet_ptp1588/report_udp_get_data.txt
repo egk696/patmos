@@ -1,0 +1,15 @@
+---
+- analysis-entry: udp_get_data
+  source: platin
+  cycles: 2076
+  cache-max-cycles-instr: 0
+  cache-min-hits-instr: 0
+  cache-max-misses-instr: 0
+  cache-max-cycles-stack: 0
+  cache-max-misses-stack: 0
+  cache-max-cycles-data: 1134
+  cache-min-hits-data: 0
+  cache-max-misses-data: 0
+  cache-max-stores-data: 54
+  cache-unknown-address-data: 54
+  cache-max-cycles: 1134

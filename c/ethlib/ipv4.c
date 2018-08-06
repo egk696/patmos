@@ -154,6 +154,7 @@ unsigned short int ipv4_compute_checksum(unsigned int pkt_addr){
 		checksum = checksum + (mem_iord_byte(pkt_addr + 14 + i) << 8) + (mem_iord_byte(pkt_addr + 15 + i) & 0xFF);
 	}
 	checksum = checksum - (mem_iord_byte(pkt_addr + 24) << 8) + (mem_iord_byte(pkt_addr + 25) & 0xFF);
+	_Pragma("loopbound min 0 max 16")	
 	while((checksum >> 16) != 0){
 		checksum = (checksum & 0xFFFF) + (checksum >> 16);
 	}
