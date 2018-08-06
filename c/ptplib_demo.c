@@ -89,7 +89,7 @@ int checkForPacket(unsigned int expectedPacketType, unsigned int expectedUDPPort
 	unsigned short source_port;
 	unsigned char source_ip[4];	
 	signed char ans;
-	if(eth_mac_receive(rx_addr, timeout)){
+	// if(eth_mac_receive(rx_addr, timeout)){
 		packet_type = mac_packet_type(rx_addr);
 		destination_port = udp_get_destination_port(rx_addr);
 		source_port = udp_get_source_port(rx_addr);
@@ -97,7 +97,7 @@ int checkForPacket(unsigned int expectedPacketType, unsigned int expectedUDPPort
 		//TODO: replace with dynamic function call provided by the user
 		switch (packet_type) {
 		case 1:
-			ans = icmp_process_received(rx_addr, tx_addr);
+			// ans = icmp_process_received(rx_addr, tx_addr);
 			return (ans==0) ? -1 : 1;
 		case 2:
 			if((destination_port==PTP_EVENT_PORT && source_port==PTP_EVENT_PORT) || (destination_port==PTP_GENERAL_PORT && source_port==PTP_GENERAL_PORT)){
@@ -106,14 +106,14 @@ int checkForPacket(unsigned int expectedPacketType, unsigned int expectedUDPPort
 				return -2;	
 			}
 		case 3:
-			ans = arp_process_received(rx_addr, tx_addr);
+			// ans = arp_process_received(rx_addr, tx_addr);
 			return (ans==0) ? -3 : 3;
 		default:
 			return -4;
 		}
-	} else {
-		return -5;
-	}
+	// } else {
+	// 	return -5;
+	// }
 }
 
 void ptp_master_loop(int msgDelay){
@@ -175,16 +175,16 @@ void ptp_slave_loop(){
 					if((ptpMsg.head.flagField & FLAG_PTP_TWO_STEP_MASK) != FLAG_PTP_TWO_STEP_MASK){
 						ptpv2_issue_msg(tx_addr, rx_addr, PTP_BROADCAST_MAC, lastMasterInfo.ip, ptpMsg.head.sequenceId, PTP_DLYREQ_MSGTYPE, PTP_DLYREQ_CTRL, PTP_EVENT_PORT);
 						*led_ptr = 0x1;
-						puts("i_MSG=1");
+						// puts("i_MSG=1");
 					}
 					break;
 				case PTP_FOLLOW_MSGTYPE:
 					ptpv2_issue_msg(tx_addr, rx_addr, PTP_BROADCAST_MAC, lastMasterInfo.ip, ptpMsg.head.sequenceId, PTP_DLYREQ_MSGTYPE, PTP_DLYREQ_CTRL, PTP_EVENT_PORT);
-					puts("i_MSG=1");
+					// puts("i_MSG=1");
 					*led_ptr = 0x1;
 					break;
 				case PTP_DLYRPLY_MSGTYPE:
-					printf("#%u\t%d\t%d\n", ptpMsg.head.sequenceId, ptpTimeRecord.offsetSeconds, ptpTimeRecord.offsetNanoseconds);
+					printf("#%u\t%d\n", ptpMsg.head.sequenceId, ptpTimeRecord.offsetNanoseconds);
 					break;
 				default:
 					puts("FAIL: EthMacRX Timeout or Unhandled");
