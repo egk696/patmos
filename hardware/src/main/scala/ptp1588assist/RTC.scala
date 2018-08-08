@@ -58,8 +58,8 @@ class RTC(clockFreq: Int, secondsWidth: Int = 32, nanoWidth: Int = 32, initialTi
   }
 
   //Update Nanoseconds
-  when(updateNsReg){
-   nsTickReg := timeReg(DATA_WIDTH-1, 0)
+  when(updateNsReg) {
+    nsTickReg := timeReg(DATA_WIDTH - 1, 0)
   }.elsewhen(tickReg){
    when(nsTickReg >= (1000000000.U - (timeStepConst.S + correctionStepReg).asUInt())){
      secTickReg := secTickReg + 1.U
@@ -72,38 +72,28 @@ class RTC(clockFreq: Int, secondsWidth: Int = 32, nanoWidth: Int = 32, initialTi
 
   //Smooth Adjustment
   when(nsOffsetReg =/= 0.S) {
-    when(nsOffsetReg < -secInNanoConst.S) {                                               //under -1s
-      correctionStepReg := 200.S
-    }.elsewhen(nsOffsetReg < -milliInNanoConst.S && nsOffsetReg >= -secInNanoConst.S) {   //-1s to -1ms
-      correctionStepReg := 100.S
+    when(nsOffsetReg < -milliInNanoConst.S || nsOffsetReg > milliInNanoConst.S) {   //under -1ms
+      nsTickReg := (nsTickReg.toSInt() + nsOffsetReg).toUInt()
+      nsOffsetReg := 0.S
     }.elsewhen(nsOffsetReg < -microInNanoConst.S && nsOffsetReg >= -milliInNanoConst.S) { //-1ms to 1us
-      correctionStepReg := 50.S
+      correctionStepReg := 20.S
     }.elsewhen(nsOffsetReg < -hundredNanoConst.S && nsOffsetReg >= -microInNanoConst.S) { //-1us to -100ns
-      correctionStepReg := 25.S
-    }.elsewhen(nsOffsetReg < -fiftyNanoConst.S && nsOffsetReg >= -hundredNanoConst.S) {   //-100ns to -50ns
       correctionStepReg := 10.S
+    }.elsewhen(nsOffsetReg < -fiftyNanoConst.S && nsOffsetReg >= -hundredNanoConst.S) {   //-100ns to -50ns
+      correctionStepReg := 2.S
     }.elsewhen(nsOffsetReg < 0.S && nsOffsetReg >= -fiftyNanoConst.S) {                 //-50ns to -1ns
       correctionStepReg := 1.S
     }.elsewhen(nsOffsetReg > 0.S && nsOffsetReg <= fiftyNanoConst.S){                   //1ns to 50ns
       correctionStepReg := -1.S
     }.elsewhen(nsOffsetReg > fiftyNanoConst.S && nsOffsetReg <= hundredNanoConst.S) {     //50ns to 100ns
-      correctionStepReg := -10.S
+      correctionStepReg := -5.S
     }.elsewhen(nsOffsetReg > hundredNanoConst.S && nsOffsetReg <= microInNanoConst.S) {   //100ns to 1us
-      correctionStepReg := -25.S
+      correctionStepReg := -10.S
     }.elsewhen(nsOffsetReg > microInNanoConst.S && nsOffsetReg <= milliInNanoConst.S) {   //1us to 1ms
-      correctionStepReg := -50.S
-    }.elsewhen(nsOffsetReg > milliInNanoConst.S && nsOffsetReg <= secInNanoConst.S){      //1ms to 1s
-      correctionStepReg := -100.S
-    }.elsewhen(nsOffsetReg > secInNanoConst.S){                                           //over -1s
-      correctionStepReg := -200.S
+      correctionStepReg := -20.S
     }.otherwise{
       correctionStepReg := 0.S
     }
-//      when(nsOffsetReg < 0.S) {
-//        correctionStepReg := 1.S //If negative offset then move faster (lacking behind)
-//      }.otherwise {
-//        correctionStepReg := -1.S //If positive offset then move slower (running forward)
-//      }
   }.otherwise {
     correctionStepReg := 0.S
   }
