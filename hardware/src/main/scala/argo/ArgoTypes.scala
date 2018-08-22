@@ -119,7 +119,7 @@ class IRQ() extends Bundle() {
 //Lefteris
 class MemIFMaster(HEADER_FIELD_WIDTH: Int, HEADER_CTRL_WIDTH: Int) extends Bundle() {
   val Addr = UInt(width = HEADER_FIELD_WIDTH - HEADER_CTRL_WIDTH)
-  val En = Bool()
+  val En = Bits(width = 2)
   val Wr = Bool()
   val Data = Bits(width = 64)
 }
@@ -130,12 +130,12 @@ class MemIFSlave extends Bundle {
 }
 
 class SPMMasterPort(headerFieldWdith: Int, headerCtrlWidth: Int) extends Bundle {
-  val M = new MemIFMaster(headerFieldWdith, headerFieldWdith).asOutput()
+  val M = new MemIFMaster(headerFieldWdith, headerCtrlWidth).asOutput()
   val S = new MemIFSlave().asInput()
 }
 
 class SPMSlavePort(headerFieldWdith: Int, headerCtrlWidth: Int) extends Bundle {
-  val M = new MemIFMaster(headerFieldWdith, headerFieldWdith).asInput()
+  val M = new MemIFMaster(headerFieldWdith, headerCtrlWidth).asInput()
   val S = new MemIFSlave().asOutput()
 }
 

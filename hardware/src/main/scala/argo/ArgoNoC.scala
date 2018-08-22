@@ -12,15 +12,30 @@ class ArgoNoC(argoConf: ArgoConfig) extends Module {
       new OcpIOSlavePort(ADDR_WIDTH, DATA_WIDTH)
     }
     val spmPorts = Vec.fill(argoConf.N * argoConf.M) {
-      new SPMMasterPort(argoConf.HEADER_FIELD_WIDTH, argoConf.HEADER_CTRL_WIDTH)
+      new SPMMasterPort(16, 2)
     }
   }
 
   val argoMesh = (0 until argoConf.M).map(j=>(0 until argoConf.M).map(i=>Module(new NoCNodeWrapper(argoConf, i==0 && j==0)).io))
 
   //Interconnect
+  /*
+   * Nodes Port Interconnect
+   *
+   *                     N
+   *                     |
+   *                     |
+   *                     |
+   *                     |
+   *      WEST <---------|---------> EAST
+   *                     |
+   *                     |
+   *                     |
+   *                     |
+   *                     S
+   */
   io.irq := 0.U
-  println("\to--Building Interconnect with topology = " + argoConf.topoType)
+  println("\to--Building Interconnect")
   for(i <- 0 until argoConf.M){
     for(j <- 0 until argoConf.N){
       val index = (i * argoConf.N) + j
@@ -34,51 +49,21 @@ class ArgoNoC(argoConf: ArgoConfig) extends Module {
       argoMesh(i)(j).spm.S := io.spmPorts(index).S
       argoMesh(i)(j).run := argoMesh(0)(0).masterRun
 
-      //Nodes
       if(i==0){
-        println("\t -Top")
-        if("bitorus" == argoConf.topoType) {
-          argoMesh(i)(j).north_in.f := argoMesh(argoConf.M - 1)(j).south_out.f
-          argoMesh(argoConf.M - 1)(j).south_out.b := argoMesh(i)(j).north_in.b
-        }
-        argoMesh(i)(j).south_in.f := argoMesh(i+1)(j).north_out.f
-        argoMesh(i+1)(j).north_out.b := argoMesh(i)(j).south_in.b
-      }else if (i==(argoConf.M-1)){
-        println("\t -Bottom")
-        argoMesh(i)(j).north_in.f := argoMesh(i-1)(j).south_out.f
-        argoMesh(i-1)(j).south_out.b := argoMesh(i)(j).north_in.b
-        if("bitorus" == argoConf.topoType) {
-          argoMesh(i)(j).south_in.f := argoMesh(0)(j).north_out.f
-          argoMesh(0)(j).north_out.b := argoMesh(i)(j).south_in.b
-        }
+        argoMesh(0)(j).south_in <> argoMesh(argoConf.M-1)(j).north_out
+        argoMesh(argoConf.M-1)(j).north_in <> argoMesh(0)(j).south_out
       }
       if(j==0){
-        println("\t -Left")
-        argoMesh(i)(j).east_in.f := argoMesh(i)(j+1).west_out.f
-        argoMesh(i)(j+1).west_out.b := argoMesh(i)(j).east_in.b
-        if("bitorus" == argoConf.topoType) {
-          argoMesh(i)(j).west_in.f := argoMesh(i)(argoConf.N - 1).east_out.f
-          argoMesh(i)(argoConf.N - 1).east_out.b := argoMesh(i)(j).west_in.b
-        }
-      } else if (j==(argoConf.N-1)){
-        println("\t -Right")
-        if("bitorus" == argoConf.topoType) {
-          argoMesh(i)(j).east_in.f := argoMesh(i)(0).west_out.f
-          argoMesh(i)(0).west_out.b := argoMesh(i)(j).east_in.b
-        }
-        argoMesh(i)(j).west_in.f := argoMesh(i)(j-1).east_out.f
-        argoMesh(i)(j-1).east_out.b := argoMesh(i)(j).west_in.b
+        argoMesh(i)(0).east_in <> argoMesh(i)(argoConf.N-1).west_out
+        argoMesh(i)(argoConf.N-1).west_in <> argoMesh(i)(0).east_out
       }
-      if (i>0 && i<(argoConf.M-1) && j>0 && j<(argoConf.N-1)){
-        println("\t -Center")
-        argoMesh(i)(j).north_in.f := argoMesh(i-1)(j).south_out.f
-        argoMesh(i-1)(j).south_out.b := argoMesh(i)(j).north_in.b
-        argoMesh(i)(j).south_in.f := argoMesh(i+1)(j).north_out.f
-        argoMesh(i+1)(j).north_out.b := argoMesh(i)(j).south_in.b
-        argoMesh(i)(j).east_in.f := argoMesh(i)(j+1).west_out.f
-        argoMesh(i)(j+1).west_out.b := argoMesh(i)(j).east_in.b
-        argoMesh(i)(j).west_in.f := argoMesh(i)(j-1).east_out.f
-        argoMesh(i)(j-1).east_out.b := argoMesh(i)(j).west_in.b
+      if(i > 0){
+        argoMesh(i)(j).south_in <> argoMesh(i-1)(j).north_out
+        argoMesh(i-1)(j).north_in <> argoMesh(i)(j).south_out
+      }
+      if(j > 0){
+        argoMesh(i)(j).east_in <> argoMesh(i)(j-1).west_out
+        argoMesh(i)(j-1).west_in <> argoMesh(i)(j).east_out
       }
     }
   }

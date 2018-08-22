@@ -9,12 +9,6 @@ import patmos.Constants._
   * @param argoConf
   */
 class NoCNodeWrapper(argoConf: ArgoConfig, master: Boolean) extends BlackBox {
-  setModuleName("noc_node_wrapper")
-  renameClock(clock, "clk")
-  reset.setName("reset")
-  if(master) {
-    setVerilogParameters("#(.MASTER(" + 1 + "))")
-  }
   val io = new Bundle(){
     val irq = Bits(width = 2).asOutput()
     val run = Bool(INPUT)
@@ -30,5 +24,14 @@ class NoCNodeWrapper(argoConf: ArgoConfig, master: Boolean) extends BlackBox {
     val east_out = new OutputPort(argoConf)
     val south_out = new OutputPort(argoConf)
     val west_out = new OutputPort(argoConf)
+  }
+  setModuleName("noc_node_wrapper")
+  addClock(Driver.implicitClock)
+  renameClock("clk", "clk")
+  renameReset("reset")
+  if(master) {
+    setVerilogParameters("#(.MASTER(" + 1 + "))")
+  } else {
+    setVerilogParameters("#(.MASTER(" + 0 + "))")
   }
 }
