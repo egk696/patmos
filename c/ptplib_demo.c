@@ -89,7 +89,7 @@ int checkForPacket(unsigned int expectedPacketType, unsigned int expectedUDPPort
 	unsigned short source_port;
 	unsigned char source_ip[4];	
 	signed char ans;
-	// if(eth_mac_receive(rx_addr, timeout)){
+	if(eth_mac_receive(rx_addr, timeout)){
 		packet_type = mac_packet_type(rx_addr);
 		destination_port = udp_get_destination_port(rx_addr);
 		source_port = udp_get_source_port(rx_addr);
@@ -111,9 +111,9 @@ int checkForPacket(unsigned int expectedPacketType, unsigned int expectedUDPPort
 		default:
 			return -4;
 		}
-	// } else {
-	// 	return -5;
-	// }
+	} else {
+		return -5;
+	}
 }
 
 void ptp_master_loop(int msgDelay){
