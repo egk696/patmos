@@ -229,7 +229,7 @@ class Patmos(configFile: String, binFile: String, datFile: String) extends Modul
     }
   } else if (cmpDevice == 4) {
     if (nrCores > 1) {
-      val argo = Module(new Argo())
+      val argo = Module(new Argo(wrapped=false))
       argo.io.superMode := 0.U
       for(i <- cores.indices){
         println("Connecting core #" + i + " <=> Argo")
@@ -239,7 +239,6 @@ class Patmos(configFile: String, binFile: String, datFile: String) extends Modul
         argo.io.comConf(i) <> cores(i).io.comConf
         argo.io.superMode(i) := cores(i).io.superMode
       }
-      io
     }
   } else if (cmpDevice == 5) {
     val ownspm = Module(new cmp.OwnSPM(nrCores, nrCores, 1024))

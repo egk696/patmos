@@ -47,7 +47,7 @@ import ocp._
 import patmos._
 
 // Aegean in the center and all the islands are Patmos
-class Argo extends Module {
+class Argo(wrapped: Boolean = false) extends Module {
 	val io = new Bundle() {
 		val comConf = Vec.fill(ArgoConfig.getSize){new OcpNISlavePort(ADDR_WIDTH, DATA_WIDTH)}
 		val comSpm = Vec.fill(ArgoConfig.getSize){new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH)}
@@ -55,9 +55,12 @@ class Argo extends Module {
 	}
 	println("Argo "+ ArgoConfig.getSize +"-cores instantiated")
 
+
   // Declare Modules
-	val argoNoc = Module(new ArgoNoC(ArgoConfig.getConfig))
-	val comSPMWrapper = Vec.fill(ArgoConfig.getSize){Module(new ComSpmWrapper(ArgoConfig.getConfig)).io}
+  val argoNoc = Module(new ArgoNoC(ArgoConfig.getConfig, wrapped))
+  val comSPMWrapper = Vec.fill(ArgoConfig.getSize) {
+    Module(new ComSpmWrapper(ArgoConfig.getConfig)).io
+  }
 
 	argoNoc.io.supervisor := io.superMode
 	// Wire up
