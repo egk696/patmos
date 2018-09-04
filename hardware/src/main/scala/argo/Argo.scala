@@ -46,25 +46,26 @@ import util._
 import ocp._
 import patmos._
 
-// Aegean in the center and all the islands are Patmos
-class Argo(wrapped: Boolean = false) extends Module {
+class Argo(argoConf: ArgoConfig, wrapped: Boolean = false) extends Module {
 	val io = new Bundle() {
-		val comConf = Vec.fill(ArgoConfig.getSize){new OcpNISlavePort(ADDR_WIDTH, DATA_WIDTH)}
-		val comSpm = Vec.fill(ArgoConfig.getSize){new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH)}
-		val superMode = Bits(INPUT, ArgoConfig.getSize)
+		val comConf = Vec.fill(argoConf.CORES){new OcpNISlavePort(ADDR_WIDTH, DATA_WIDTH)}
+		val comSpm = Vec.fill(argoConf.CORES){new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH)}
+		val superMode = Bits(INPUT, argoConf.CORES)
 	}
-	println("Argo "+ ArgoConfig.getSize +"-cores instantiated")
+	println("Argo connecting "+ argoConf.CORES +" Patmos islands with configuration:")
+  println("N=" + argoConf.N)
+  println("M=" + argoConf.M)
+  println("SPM_SIZE (Bytes)=" + argoConf.SPM_BYTES)
 
-
-  // Declare Modules
-  val argoNoc = Module(new ArgoNoC(ArgoConfig.getConfig, wrapped))
-  val comSPMWrapper = Vec.fill(ArgoConfig.getSize) {
-    Module(new ComSpmWrapper(ArgoConfig.getConfig)).io
+  // Generate Argo and COM-SPMs
+  val argoNoc = Module(new ArgoNoC(argoConf, wrapped))
+  val comSPMWrapper = Vec.fill(argoConf.CORES) {
+    Module(new ComSpmWrapper(argoConf)).io
   }
 
-	argoNoc.io.supervisor := io.superMode
 	// Wire up
-	for(i <- 0 until ArgoConfig.getSize){
+  argoNoc.io.supervisor := io.superMode
+	for(i <- 0 until argoConf.CORES){
     // NoC - Patmos
     argoNoc.io.ocpPorts(i).M := io.comConf(i).M
     io.comConf(i).S := argoNoc.io.ocpPorts(i).S
@@ -81,6 +82,6 @@ class Argo(wrapped: Boolean = false) extends Module {
 
 object Argo {
 	def main(args: Array[String]): Unit = {
-		chiselMain(args, () => Module(new Argo()))
+		chiselMain(args, () => Module(new Argo(ArgoConfig.getConfig)))
 	}
 }

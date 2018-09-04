@@ -83,39 +83,6 @@ class IRQ() extends Bundle() {
   val irq = Bits(width = 2)
 }
 
-//class SPMMasterSignals(linkWidth: Int, addrWidth: Int) extends Bundle() {
-//  val address = Bits(width = addrWidth)
-//  val wrEn = Bits(width = 1)
-//  val writeData = Bits(width = linkWidth * 2)
-//
-//
-//  // This does not really clone, but Data.clone doesn't either
-//  override def clone() = {
-//    val res = new SPMMasterSignals(linkWidth, addrWidth)
-//    res.asInstanceOf[this.type]
-//  }
-//}
-//
-//class SPMSlaveSignals(linkWidth: Int) extends Bundle() {
-//  val readData = Bits(width = linkWidth * 2)
-//
-//  // This does not really clone, but Data.clone doesn't either
-//  override def clone() = {
-//    val res = new SPMSlaveSignals(linkWidth)
-//    res.asInstanceOf[this.type]
-//  }
-//}
-//
-//class SPMMasterPort(linkWidth: Int, addrWidth: Int) extends Bundle() {
-//  val master = new SPMMasterSignals(linkWidth, addrWidth).asOutput
-//  val slave = new SPMSlaveSignals(linkWidth).asInput
-//}
-//
-//class SPMSlavePort(linkWidth: Int, addrWidth: Int) extends Bundle() {
-//  val master = new SPMMasterSignals(linkWidth, addrWidth).asInput
-//  val slave = new SPMSlaveSignals(linkWidth).asOutput
-//}
-
 //Lefteris
 class MemIFMaster(HEADER_FIELD_WIDTH: Int, HEADER_CTRL_WIDTH: Int) extends Bundle() {
   val Addr = UInt(width = HEADER_FIELD_WIDTH - HEADER_CTRL_WIDTH)

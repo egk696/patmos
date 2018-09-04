@@ -17,4 +17,5 @@ class ComSpmWrapper(argoConf: ArgoConfig) extends BlackBox {
     val ocp = new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH)
     val spm = new SPMSlavePort(argoConf.HEADER_FIELD_WIDTH, argoConf.HEADER_CTRL_WIDTH)
   }
+  setVerilogParameters("#(.SPM_IDX_SIZE(" + argoConf.SPM_IDX_SIZE + "))")
 }

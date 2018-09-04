@@ -15,7 +15,7 @@ import scala.collection.mutable.HashMap
 import java.io.File
 
 import Constants._
-import argo.Argo
+import argo._
 import util._
 import io._
 import datacache._
@@ -229,7 +229,8 @@ class Patmos(configFile: String, binFile: String, datFile: String) extends Modul
     }
   } else if (cmpDevice == 4) {
     if (nrCores > 1) {
-      val argo = Module(new Argo(wrapped=false))
+      ArgoConfig.setCores(nrCores)
+      val argo = Module(new Argo(ArgoConfig.getConfig, wrapped=false))
       argo.io.superMode := 0.U
       for(i <- cores.indices){
         println("Connecting core #" + i + " <=> Argo")
